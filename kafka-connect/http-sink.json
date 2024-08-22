@@ -1,0 +1,15 @@
+{
+  "name": "http-sink-test",
+  "config": {
+    "connector.class": "io.aiven.kafka.connect.http.HttpSinkConnector",
+    "topics": "quotes",
+    "http.authorization.type": "none",
+    "http.url": "http://172.17.0.1:7071/api/handleKafkaMessage",
+    "batching.enabled": true,
+    "batch.max.size": 2,
+    "tasks.max": "1",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable":false
+  }
+}

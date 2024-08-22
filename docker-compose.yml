@@ -1,0 +1,124 @@
+services:
+## HASURA RELATED CONTAINERS
+  postgres:
+    container_name: postgres
+    image: postgres:15
+    restart: always
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgrespassword
+  graphql-engine:
+    container_name: hasura-engine
+    image: hasura/graphql-engine:v2.40.0
+    ports:
+      - "8080:8080"
+    restart: always
+    env_file:
+      - ./hasura-metadata/.env
+    environment:
+      ## enable the console served by server
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "true" if you want to enable console
+      ## enable debugging mode. It is recommended to disable this in production
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      ## uncomment next line to run console offline (i.e load console assets from server instead of CDN)
+      # HASURA_GRAPHQL_CONSOLE_ASSETS_DIR: /srv/console-assets
+      HASURA_GRAPHQL_METADATA_DEFAULTS: '{"backend_configs":{"dataconnector":{"athena":{"uri":"http://data-connector-agent:8081/api/v1/athena"},"mariadb":{"uri":"http://data-connector-agent:8081/api/v1/mariadb"},"mysql8":{"uri":"http://data-connector-agent:8081/api/v1/mysql"},"oracle":{"uri":"http://data-connector-agent:8081/api/v1/oracle"},"snowflake":{"uri":"http://data-connector-agent:8081/api/v1/snowflake"}}}}'
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
+    depends_on:
+      data-connector-agent:
+        condition: service_healthy
+  data-connector-agent:
+    container_name: hasura-connector
+    image: hasura/graphql-data-connector:v2.40.0
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      QUARKUS_LOG_LEVEL: ERROR # FATAL, ERROR, WARN, INFO, DEBUG, TRACE
+      ## https://quarkus.io/guides/opentelemetry#configuration-reference
+      QUARKUS_OPENTELEMETRY_ENABLED: "false"
+      ## QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/v1/athena/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+
+## KAFKA RELATED CONTAINERS
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.2.1
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.2.1
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9997:9997"
+    environment:
+      # ADV_HOST: 127.0.0.1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    # volumes: 
+    #   - ./kafka-data:/var/lib/kafka/data
+  # Create the required topics 
+  # kafka-connect-configs,kafka-connect-offsets, kafka-connect-status - 
+  # These topics are needed for kafka connect (defined in the kafka connect service)
+  kafka-init-topics:
+    image: confluentinc/cp-kafka:7.2.1
+    container_name: kafka-init-topics
+    depends_on:
+      - kafka
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+               cub kafka-ready -b kafka:9092 1 30 && \
+               kafka-topics --create --topic kafka-connect-configs --partitions 1 --replication-factor 1 --config cleanup.policy=compact --if-not-exists --bootstrap-server kafka:9092 && \
+               kafka-topics --create --topic kafka-connect-offsets --partitions 1 --replication-factor 1 --config cleanup.policy=compact --if-not-exists --bootstrap-server kafka:9092 && \
+               kafka-topics --create --topic kafka-connect-status --partitions 1 --replication-factor 1 --config cleanup.policy=compact --if-not-exists --bootstrap-server kafka:9092 && \
+               kafka-topics --create --topic quotes --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:9092 '"
+  kafka-ui:
+      container_name: kafka-ui
+      image: provectuslabs/kafka-ui:latest
+      depends_on:
+        - kafka
+      ports:
+        - 9010:8080
+      environment:
+        KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+        KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+        # DYNAMIC_CONFIG_ENABLED: 'true'
+  kafka-connect:
+      image: kafka-connect-http:1.0.0 
+      container_name: kafka-connect
+      hostname: kafka-connect
+      ports:
+       - 8083:8083
+      depends_on:
+        - kafka
+      environment:
+        CONNECT_BOOTSTRAP_SERVERS: 'kafka:9092'
+        CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+        CONNECT_REST_ADVERTISED_HOST_NAME: localhost
+        CONNECT_REST_PORT: 8083
+        CONNECT_GROUP_ID: compose-connect-group
+        # Create the following topics with cleanup as compact not delete
+        CONNECT_CONFIG_STORAGE_TOPIC: kafka-connect-configs
+        CONNECT_OFFSET_STORAGE_TOPIC: kafka-connect-offsets
+        CONNECT_STATUS_STORAGE_TOPIC: kafka-connect-status
+        CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+        CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter

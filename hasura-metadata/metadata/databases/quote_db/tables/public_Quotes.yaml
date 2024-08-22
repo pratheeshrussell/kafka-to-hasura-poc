@@ -1,0 +1,18 @@
+table:
+  name: Quotes
+  schema: public
+insert_permissions:
+  - role: azure_user
+    permission:
+      check: {}
+      columns:
+        - quote
+    comment: ""
+select_permissions:
+  - role: azure_user
+    permission:
+      columns:
+        - id
+        - quote
+      filter: {}
+    comment: ""

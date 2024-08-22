@@ -1,0 +1,8 @@
+node_modules/
+
+# .env
+db_data/
+kafka-connect-data/
+kafka-data/
+
+only_for_experiment/
