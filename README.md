@@ -4,6 +4,9 @@ The aim is to demonstrate dataflow from Kafka topic to Postgres via Hasura and A
 > [!NOTE]
 > This is just a POC so env files are not added to gitignore
 
+## Data flow
+![data flow|500](docs/Kafka-hasura-data-flow.png)
+
 ## Project Setup
 ### 1. Setup containers
 Build the image for kafka connect
@@ -45,6 +48,14 @@ To create topics and messages via UI
 Migration files for the demo are available.   
    
 TBD
+
+## Message Format
+For the demo the message sent to kafka should be a json with key **quote**
+```json
+{
+	"quote": "quote 1"
+}
+```
 
 ## OS and Versions
 - Ubuntu 22.04  
