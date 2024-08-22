@@ -67,7 +67,7 @@ For the demo the message sent to kafka should be a json with key **quote**
 
 ## OS and Versions
 - Ubuntu 22.04  
-- Node 16.16.0 - CHECK VERSION USED IN AZURE AND USE THAT  
+- Node 18.19.1   
 - npm 8.11.0  
 - Azure func cli 4.0.5907  
 - Hasura cli 2.40.0  

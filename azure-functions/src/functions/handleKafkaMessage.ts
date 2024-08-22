@@ -1,40 +1,29 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import fetch from 'cross-fetch';
+import { QuoteQuery } from "./gqlQueries/quote.query";
+import { InsertQuoteResponse, InsertQuoteVars, QuoteTopicTrigger } from "./types/common.types";
 
 export async function handleKafkaMessage(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     const hasuraUrl = "http://localhost:8080/v1/graphql";
     const roleName = "azure_user"; // The user role with insert permission
     
-    // use some gql library for this
-    const rawQuery = `
-        mutation InsertQuoteMutation($quote_input: String!) {
-            insert_Quotes(objects: {quote: $quote_input}) {
-                affected_rows
-                returning {
-                quote
-                }
-            }
-        }
-    `;
-
     const headers = {
         "Content-Type": "application/json",
         "X-Hasura-Role": roleName,
-        "x-hasura-admin-secret": "OlJa9bk8ZANuGeGpuAN8HP88Y"
+        "x-hasura-admin-secret": process.env["hasura_secret"]
     };
     context.log(`================`);
     context.log(`Received request`);
     
     if(request.method === 'POST') {
         const bodyText = (await request.text());
-        const body = JSON.parse(bodyText) as any;
+        const body = JSON.parse(bodyText) as QuoteTopicTrigger;
         context.log(`Received body: ${bodyText}`);
         
         if(Object.prototype.hasOwnProperty.call(body, 'quote')){
             context.log(`Quote found: ${body.quote}`);
          try {
-            const mutationQuery = rawQuery;
-            const mutationVars = {
+            const mutationQuery = QuoteQuery.insertQuote;
+            const mutationVars: InsertQuoteVars = {
                 "quote_input": body.quote
             }
             const response = await fetch(hasuraUrl, {
@@ -46,7 +35,7 @@ export async function handleKafkaMessage(request: HttpRequest, context: Invocati
                 })
             });
     
-            const data = await response.json();
+            const data = (await response.json()) as InsertQuoteResponse;
             if (response.ok) {
                 context.log(`fetch response ok with data: ${JSON.stringify(data)}`);
                 return { jsonBody: data, status: 200 };
