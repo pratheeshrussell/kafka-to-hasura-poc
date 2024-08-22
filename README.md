@@ -20,12 +20,17 @@ docker compose up -d
 ```
 
 ### 2. Start azure function
-Run azure function cli
+In the azure functions folder rename **local.settings.sample.json** to **local.settings.json**  
+Next Run azure function cli
 ```
 cd azure-functions
+npm install
 npm run start
 ```
 BASE URL will be http://172.17.0.1:7071/api when called from inside the container
+> [!NOTE]
+> Using 172.17.0.1 works in ubuntu. If you are using windows or mac try using **host.docker.internal**. 
+
 ### 3. Start hasura cli
 Run hasura console cli (no admin secret set here)
 ```
@@ -39,6 +44,9 @@ Modify the **http-sink.json** in *kafka-connect* folder
 cd kafka-connect
 curl -d @http-sink.json -H "Content-Type: application/json" -X POST http://localhost:8083/connectors
 ```
+
+> [!NOTE]
+> In **http-sink.json** I have used 172.17.0.1 to call the Azure function that runs outside the container ie., on the host, this works in ubuntu. If you are using windows or mac try using **host.docker.internal**. 
 
 ## Kafka UI
 To create topics and messages via UI   
