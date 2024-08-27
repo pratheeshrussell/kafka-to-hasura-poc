@@ -65,6 +65,11 @@ For the demo the message sent to kafka should be a json with key **quote**
 }
 ```
 
+## Testing the function directly
+```
+curl -X POST -H "Content-Type: application/json" -d '{"quote": "quote 1"}' http://localhost:7071/api/handleKafkaMessage
+```
+
 ## OS and Versions
 - Ubuntu 22.04  
 - Node 18.19.1   

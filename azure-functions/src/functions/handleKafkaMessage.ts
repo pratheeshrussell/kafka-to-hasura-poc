@@ -1,16 +1,20 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { QuoteQuery } from "./gqlQueries/quote.query";
-import { InsertQuoteResponse, InsertQuoteVars, QuoteTopicTrigger } from "./types/common.types";
+import { Client } from 'pg';
+import { QuoteTopicTrigger } from "./types/common.types";
 
 export async function handleKafkaMessage(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-    const hasuraUrl = "http://localhost:8080/v1/graphql";
-    const roleName = "azure_user"; // The user role with insert permission
-    
-    const headers = {
-        "Content-Type": "application/json",
-        "X-Hasura-Role": roleName,
-        "x-hasura-admin-secret": process.env["hasura_secret"]
+    const config = {
+        host: 'localhost',
+        // Do not hard code your username and password.
+        // USE environment variables.
+        user: 'postgres',     
+        password: 'postgrespassword',
+        database: 'postgres',
+        port: 5432,
+        ssl: false
     };
+
+    const pgclient = new Client(config);
     context.log(`================`);
     context.log(`Received request`);
     
@@ -18,34 +22,32 @@ export async function handleKafkaMessage(request: HttpRequest, context: Invocati
         const bodyText = (await request.text());
         const body = JSON.parse(bodyText) as QuoteTopicTrigger;
         context.log(`Received body: ${bodyText}`);
+
         
         if(Object.prototype.hasOwnProperty.call(body, 'quote')){
             context.log(`Quote found: ${body.quote}`);
          try {
-            const mutationQuery = QuoteQuery.insertQuote;
-            const mutationVars: InsertQuoteVars = {
-                "quote_input": body.quote
-            }
-            const response = await fetch(hasuraUrl, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify({
-                    query: mutationQuery,
-                    variables: mutationVars
+            const sql = `
+                INSERT INTO public."Quotes" (quote)
+                VALUES ($1)
+                RETURNING quote;
+            `;
+            const values = [body.quote]; 
+            await pgclient.connect().then(async ()=>{
+               await pgclient.query(sql, values).then((result)=>{
+                    context.log('Quote inserted successfully:', result.rows[0]);
+                }).catch((err)=>{
+                    context.log(`query error caught ${err.message}`);
+                    throw err;
                 })
+            }).catch((err)=>{
+                context.log(`connect error caught ${err.message}`);
+                throw err;
+            }).finally(()=>{
+                pgclient.end();
             });
-    
-            const data = (await response.json()) as InsertQuoteResponse;
-            if (response.ok) {
-                context.log(`fetch response ok with data: ${JSON.stringify(data)}`);
-                return { jsonBody: data, status: 200 };
-            } else {
-                context.log(`fetch response not ok`);
-                // SEND 200 ALWAYS
-                return { body: data.toString(), status: 200 };
-            }
+                    
         } catch (error) {
-            context.log(`fetch error caught ${error.message}`);
             // SEND 200 ALWAYS
             return { body: error.message, status: 200 };
         }
