@@ -1,8 +1,11 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { Client } from 'pg';
-import { QuoteTopicTrigger } from "./types/common.types";
+import { kafkaListenerInput, QuoteTopicTrigger } from "./types/common.types";
 
-export async function handleKafkaMessage(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+
+
+export async function handleKafkaMessage(request: kafkaListenerInput, context: InvocationContext): Promise<HttpResponseInit> {
+
     const config = {
         host: 'localhost',
         // Do not hard code your username and password.
@@ -18,8 +21,8 @@ export async function handleKafkaMessage(request: HttpRequest, context: Invocati
     context.log(`================`);
     context.log(`Received request`);
     
-    if(request.method === 'POST') {
-        const bodyText = (await request.text());
+    
+        const bodyText = (await request.Value);
         const body = JSON.parse(bodyText) as QuoteTopicTrigger;
         context.log(`Received body: ${bodyText}`);
 
@@ -55,14 +58,19 @@ export async function handleKafkaMessage(request: HttpRequest, context: Invocati
             context.log(`Quote not found`);
         }
         
-    }
     context.log(`================`);
 
     return { jsonBody: {message:`Request Received`} };
 };
 
-app.http('handleKafkaMessage', {
-    methods: ['GET', 'POST'],
-    authLevel: 'anonymous',
-    handler: handleKafkaMessage
-});
+app.generic('handleKafka',{
+    handler:handleKafkaMessage,
+    trigger:{
+        type:'KafkaTrigger',
+        name:'QuoteTopicTrigger',
+        brokerList: 'localhost:29092',
+        topic:'quotes',
+        consumerGroup:'azure-quotes-consumer',
+        protocol:'plaintext'
+    }
+})

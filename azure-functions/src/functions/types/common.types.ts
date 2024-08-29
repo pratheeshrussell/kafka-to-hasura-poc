@@ -1,3 +1,14 @@
+
+export type kafkaListenerInput = {
+    Offset:number,
+    Partition:number,
+    Topic:string,
+    Timestamp:string,
+    Value:string,
+    Key:string,
+    Headers:any
+}
+
 export type InsertQuoteVars = {
     "quote_input": string
 }
