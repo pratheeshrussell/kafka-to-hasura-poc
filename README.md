@@ -1,5 +1,5 @@
 # Hasura Kafka POC
-The aim is to demonstrate dataflow from Kafka topic to Postgres via Hasura and Azure functions
+The aim is to demonstrate data flow from Hasura to kafka via Debezium connector
 
 > [!NOTE]
 > This is just a POC so env files are not added to gitignore
@@ -11,48 +11,36 @@ There are multiple POC in different branches
 - azure_kafka_trigger branch - Kafka -> Azure function(kafka trigger) -> PG DB
 
 ## Data flow
-![data flow|500](docs/Kafka-hasura-data-flow.png)
+Hasura -> Postgres DB -> Debezium -> Kafka
 
 ## Project Setup
 ### 1. Setup containers
+> [!NOTE]
+> Before building the image make necessary changes to the **debezium-source.json** in *kafka-connect* folder 
+
 Build the image for kafka connect
 ```
 cd kafka-connect
-docker build . -t kafka-connect-http:1.0.0
+docker build . -t kafka-connect-debezium:1.0.0
 ```
 Run kafka, hasura, postgres with
 ```
 docker compose up -d
 ```
 
-### 2. Start azure function
-In the azure functions folder rename **local.settings.sample.json** to **local.settings.json**  
-Next Run azure function cli
-```
-cd azure-functions
-npm install
-npm run start
-```
-BASE URL will be http://172.17.0.1:7071/api when called from inside the container
-> [!NOTE]
-> Using 172.17.0.1 works in ubuntu. If you are using windows or mac try using **host.docker.internal**. 
-
-### 3. Start hasura cli
+### 2. Start hasura cli
 Run hasura console cli (no admin secret set here)
 ```
 cd hasura-metadata
 hasura console --console-port 9500
 ```
 
-### 3. Setup kafka connect connection
-Modify the **http-sink.json** in *kafka-connect* folder
+## Postgres setup
+Check the docker compose file. The following line is required
 ```
-cd kafka-connect
-curl -d @http-sink.json -H "Content-Type: application/json" -X POST http://localhost:8083/connectors
+command: [ "postgres", "-c", "wal_level=logical", "-c","max_replication_slots=1" ]
 ```
-
-> [!NOTE]
-> In **http-sink.json** I have used 172.17.0.1 to call the Azure function that runs outside the container ie., on the host, this works in ubuntu. If you are using windows or mac try using **host.docker.internal**. 
+- [Enable logical decoding](https://docs.confluent.io/kafka-connectors/debezium-postgres-source/current/overview.html#enable-logical-decoding)
 
 ## Kafka UI
 To create topics and messages via UI   
@@ -63,13 +51,7 @@ Migration files for the demo are available.
    
 TBD
 
-## Message Format
-For the demo the message sent to kafka should be a json with key **quote**
-```json
-{
-	"quote": "quote 1"
-}
-```
+
 
 ## OS and Versions
 - Ubuntu 22.04  

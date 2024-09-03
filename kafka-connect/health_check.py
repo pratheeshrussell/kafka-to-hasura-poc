@@ -2,10 +2,10 @@ import requests
 import json
 import sys
 
-connector_name = "http-sink-test"
+connector_name = "debezium-source-test"
 base_url = "http://localhost:8083/connectors"
 status_url = f"{base_url}/{connector_name}/status"
-connector_file_path = "/etc/kafka-connect/http-sink.json"
+connector_file_path = "/etc/kafka-connect/debezium-source.json"
 
 try:
     # Add connector if it doesn't exist

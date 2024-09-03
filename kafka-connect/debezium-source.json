@@ -1,0 +1,15 @@
+{
+  "name": "debezium-source-test",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "plugin.name":"pgoutput",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgrespassword",
+    "database.dbname": "postgres",
+    "topic.prefix": "quotes-update",
+    "table.include.list": "public.Quotes"
+  }
+}
