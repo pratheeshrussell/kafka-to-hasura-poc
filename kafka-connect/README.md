@@ -11,6 +11,8 @@ Modify the following in http-sink.json
 - http.url
 
 ## Add the connector definition
+Here we add the connector definition via the health_check py
+### To add connector definition manually
 ```
 curl -d @http-sink.json -H "Content-Type: application/json" -X POST http://localhost:8083/connectors
 ```
@@ -32,4 +34,4 @@ curl -X POST http://localhost:8083/connectors/http-sink-test/restart?includeTask
 ```
 
 ## Build the connector
-Refer ![Create_connector_zip file](Create_connector_zip.md)
+Refer [Create_connector_zip file](Create_connector_zip.md)

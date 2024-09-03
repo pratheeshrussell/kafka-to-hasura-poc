@@ -13,8 +13,6 @@ Download the code from [http-connector-for-apache-kafka](https://github.com/Aive
 - add them to a folder lib and add manifest file
 - some naming conventions are needed check [reference links](#refer)
 
-
-
 ## REFER
 * [kafka-connect-http plugin](https://github.com/clescot/kafka-connect-http) this didn't work however we can use it as a reference to get the manigest file   
 * [Install connector](https://docs.confluent.io/platform/current/connect/devguide.html#create-an-archive)  

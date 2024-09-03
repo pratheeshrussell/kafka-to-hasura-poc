@@ -122,3 +122,8 @@ services:
         CONNECT_STATUS_STORAGE_TOPIC: kafka-connect-status
         CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
         CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      healthcheck:
+        test: ["CMD", "python3", "/etc/kafka-connect/health_check.py"]
+        interval: 30s
+        retries: 3
+        timeout: 10s

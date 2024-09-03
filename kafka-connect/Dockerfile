@@ -6,6 +6,7 @@ USER root
 # RUN curl -s -L https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${jmx_exporter_version}/jmx_prometheus_javaagent-${jmx_exporter_version}.jar -o /tmp/jmx_prometheus_javaagent.jar;
 # main step
 COPY http-sink.json /etc/kafka-connect/http-sink.json
+COPY health_check.py /etc/kafka-connect/health_check.py
 COPY spr-http-connector-for-apache-kafka-0.8.0-SNAPSHOT.zip /tmp/kafka-connect-http.zip
 RUN chmod 666 /tmp/kafka-connect-http.zip
 RUN confluent-hub install --no-prompt /tmp/kafka-connect-http.zip
