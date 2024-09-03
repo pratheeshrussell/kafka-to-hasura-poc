@@ -9,6 +9,7 @@ There are multiple POC in different branches
 - main branch - Kafka -> kafka connect -> Azure function(http trigger) -> Hasura -> PG DB
 - direct_postgres_call branch - Kafka -> kafka connect -> Azure function(http endpoint) -> PG DB
 - azure_kafka_trigger branch - Kafka -> Azure function(kafka trigger) -> PG DB
+- debezium_outboxing - Hasura -> Postgres DB -> Debezium -> Kafka
 
 ## Data flow
 ![data flow|500](docs/Kafka-hasura-data-flow.png)
