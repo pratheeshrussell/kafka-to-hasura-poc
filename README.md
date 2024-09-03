@@ -4,6 +4,12 @@ The aim is to demonstrate dataflow from Kafka topic to Postgres via Hasura and A
 > [!NOTE]
 > This is just a POC so env files are not added to gitignore
 
+## Branches
+There are multiple POC in different branches
+- main branch - Kafka -> kafka connect -> Azure function(http trigger) -> Hasura -> PG DB
+- direct_postgres_call branch - Kafka -> kafka connect -> Azure function(http endpoint) -> PG DB
+- azure_kafka_trigger branch - Kafka -> Azure function(kafka trigger) -> PG DB
+
 ## Data flow
 ![data flow|500](docs/Kafka-hasura-data-flow.png)
 
