@@ -1,0 +1,21 @@
+input:
+  label: kafka_service
+  kafka:
+    addresses:
+      - ${RPC_KAFKA_BROKER}
+    topics:
+      - ${RPC_KAFKA_TOPIC}
+    consumer_group: rpc_group
+    start_from_oldest: true
+pipeline:
+  processors: []
+output:
+  label: postgres_insert
+  sql_insert:
+    driver: postgres
+    dsn: ${RPC_PG_DATABASE_URL}
+    table: public."Quotes"
+    columns:
+      - quote
+    args_mapping: root = [this.quote]
+
