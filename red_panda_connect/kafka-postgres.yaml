@@ -1,20 +1,32 @@
 input:
   resource: kafka_service
 pipeline:
-  processors: []
+  processors:
+    - switch:
+        - check: 'this.quote != null && this.quote != "" '
+          processors:
+            - resource: pg_quote_insert
+          fallthrough: false
+        - check: 'this.quote == null || this.quote == "" '
+          processors:
+            - label: error_simulator
+              bloblang: |
+                throw("Quote is required")
+          fallthrough: false
+
 output:
-  label: validate
+  label: handle_output
   switch:
     cases:
-      - check: 'this.quote != null && this.quote != "" '
+      - check: errored()
         output:
-          resource: pg_quote_insert
-        continue: false
-      - check: 'this.quote == null || this.quote == "" '
-        output:
+          processors:
+           - mapping: |
+              root.payload = this
+              root.error = error()
           resource: kafka_dlq
-        continue: false
-
+      - output:
+          drop: {}
 input_resources:
   - label: kafka_service
     kafka:
@@ -24,7 +36,7 @@ input_resources:
         - ${RPC_KAFKA_TOPIC}
       consumer_group: rpc_group
       start_from_oldest: true
-output_resources:
+processor_resources:
   - label: pg_quote_insert
     sql_insert:
       driver: postgres
@@ -33,12 +45,13 @@ output_resources:
       columns:
         - quote
       args_mapping: root = [this.quote]
+output_resources:
   - label: kafka_dlq
     kafka:
       addresses:
         - ${RPC_KAFKA_BROKER}
       topic: quotes_dlq
-      key: "Error"
+      key: Error
       custom_topic_creation:
         enabled: true
       max_retries: 2
