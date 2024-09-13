@@ -1,21 +1,44 @@
 input:
-  label: kafka_service
-  kafka:
-    addresses:
-      - ${RPC_KAFKA_BROKER}
-    topics:
-      - ${RPC_KAFKA_TOPIC}
-    consumer_group: rpc_group
-    start_from_oldest: true
+  resource: kafka_service
 pipeline:
   processors: []
 output:
-  label: postgres_insert
-  sql_insert:
-    driver: postgres
-    dsn: ${RPC_PG_DATABASE_URL}
-    table: public."Quotes"
-    columns:
-      - quote
-    args_mapping: root = [this.quote]
+  label: validate
+  switch:
+    cases:
+      - check: 'this.quote != null && this.quote != "" '
+        output:
+          resource: pg_quote_insert
+        continue: false
+      - check: 'this.quote == null || this.quote == "" '
+        output:
+          resource: kafka_dlq
+        continue: false
 
+input_resources:
+  - label: kafka_service
+    kafka:
+      addresses:
+        - ${RPC_KAFKA_BROKER}
+      topics:
+        - ${RPC_KAFKA_TOPIC}
+      consumer_group: rpc_group
+      start_from_oldest: true
+output_resources:
+  - label: pg_quote_insert
+    sql_insert:
+      driver: postgres
+      dsn: ${RPC_PG_DATABASE_URL}
+      table: public."Quotes"
+      columns:
+        - quote
+      args_mapping: root = [this.quote]
+  - label: kafka_dlq
+    kafka:
+      addresses:
+        - ${RPC_KAFKA_BROKER}
+      topic: quotes_dlq
+      key: "Error"
+      custom_topic_creation:
+        enabled: true
+      max_retries: 2
